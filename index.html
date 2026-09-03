@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lyrics Setlist Builder</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f1eb;
+        --surface: #fffdf8;
+        --surface-strong: #ffffff;
+        --ink: #1d2a25;
+        --muted: #647068;
+        --line: #d8ddd7;
+        --accent: #176b52;
+        --accent-soft: #dcefe7;
+        --danger: #a33c31;
+        --danger-soft: #f8e2de;
+        --shadow: 0 12px 36px rgba(29, 42, 37, 0.08);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #e1eee8 0, transparent 34rem),
+          var(--bg);
+      }
+
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+
+      button,
+      select {
+        min-height: 2.4rem;
+        border: 1px solid var(--line);
+        border-radius: 0.65rem;
+        color: var(--ink);
+        background: var(--surface-strong);
+      }
+
+      button {
+        padding: 0.45rem 0.75rem;
+        cursor: pointer;
+      }
+
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible {
+        outline: 3px solid rgba(23, 107, 82, 0.25);
+        outline-offset: 2px;
+      }
+
+      button:disabled,
+      select:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .primary {
+        border-color: var(--accent);
+        color: white;
+        background: var(--accent);
+        font-weight: 700;
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 1.4rem clamp(1rem, 4vw, 3rem);
+        border-bottom: 1px solid rgba(216, 221, 215, 0.8);
+        background: rgba(255, 253, 248, 0.8);
+        backdrop-filter: blur(16px);
+      }
+
+      .eyebrow {
+        margin: 0 0 0.2rem;
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(1.6rem, 4vw, 2.4rem);
+        font-weight: 600;
+      }
+
+      h2 {
+        margin-bottom: 0.25rem;
+        font-size: 1.05rem;
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .file-button input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .file-button span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.6rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 0.7rem;
+        color: white;
+        background: var(--accent);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .drop-zone {
+        margin: 1.5rem clamp(1rem, 4vw, 3rem) 0;
+        padding: 1rem 1.25rem;
+        border: 1px dashed #9caea5;
+        border-radius: 0.8rem;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.45);
+        text-align: center;
+      }
+
+      .drop-zone.dragging {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .diagnostics {
+        margin: 1rem clamp(1rem, 4vw, 3rem) 0;
+        padding: 0.8rem 1rem;
+        border: 1px solid var(--line);
+        border-radius: 0.8rem;
+        background: var(--surface);
+      }
+
+      .diagnostics[data-level="error"] {
+        border-color: #e3aaa3;
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      .diagnostics ul {
+        margin: 0.5rem 0 0;
+        padding-left: 1.25rem;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 4vw, 3rem) 3rem;
+      }
+
+      .workspace[hidden],
+      [hidden] {
+        display: none !important;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .set-select {
+        width: 100%;
+        margin-top: 0.7rem;
+        padding: 0.45rem;
+      }
+
+      .song-list {
+        display: grid;
+        gap: 0.35rem;
+        max-height: calc(100vh - 18rem);
+        margin: 0;
+        padding: 0.65rem;
+        overflow: auto;
+        list-style: none;
+      }
+
+      .song-list button {
+        display: grid;
+        grid-template-columns: 2rem 1fr;
+        width: 100%;
+        height: auto;
+        padding: 0.65rem;
+        border-color: transparent;
+        background: transparent;
+        text-align: left;
+      }
+
+      .song-list button[aria-current="true"] {
+        border-color: #b7d7c9;
+        background: var(--accent-soft);
+      }
+
+      .song-list button.missing {
+        border-color: #e3aaa3;
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      .song-number {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .song-name {
+        font-weight: 650;
+      }
+
+      .editor {
+        display: grid;
+        gap: 1rem;
+        min-width: 0;
+      }
+
+      .mapping-wrap,
+      .roadmap-wrap,
+      .preview-wrap {
+        padding: 1rem;
+      }
+
+      .mapping-table {
+        width: 100%;
+        margin-top: 0.75rem;
+        border-collapse: collapse;
+      }
+
+      .mapping-table th,
+      .mapping-table td {
+        padding: 0.55rem;
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      .mapping-table th {
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mapping-table select {
+        width: 100%;
+        padding: 0.35rem;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(19rem, 0.9fr) minmax(22rem, 1.1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .roadmap-list {
+        display: grid;
+        gap: 0.55rem;
+        margin: 0.8rem 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .roadmap-step {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.55rem;
+        padding: 0.65rem;
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        background: var(--surface-strong);
+      }
+
+      .step-title {
+        overflow: hidden;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .step-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+
+      .step-controls button {
+        min-width: 2.2rem;
+        min-height: 2.1rem;
+        padding: 0.25rem 0.45rem;
+      }
+
+      .language-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        margin-top: 0.35rem;
+      }
+
+      .language-toggle button {
+        min-height: 1.85rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .language-toggle button[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: white;
+        background: var(--accent);
+      }
+
+      .add-row {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .add-row select {
+        flex: 1;
+        min-width: 0;
+        padding: 0.4rem;
+      }
+
+      .preview {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.8rem;
+      }
+
+      .preview-title {
+        padding-bottom: 0.65rem;
+        border-bottom: 1px solid var(--line);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 1.15rem;
+      }
+
+      .slide {
+        padding: 0.85rem;
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        background: var(--surface-strong);
+      }
+
+      .slide-label {
+        margin-bottom: 0.45rem;
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .slide-body {
+        margin: 0;
+        font-family: inherit;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .export-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      @media (max-width: 900px) {
+        .workspace,
+        .split {
+          grid-template-columns: 1fr;
+        }
+
+        .song-list {
+          max-height: 18rem;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .mapping-table th,
+        .mapping-table td {
+          padding: 0.4rem 0.25rem;
+        }
+
+        .roadmap-step {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Offline tour utility</p>
+        <h1>Lyrics Setlist Builder</h1>
+      </div>
+      <label class="file-button">
+        <input
+          id="project-input"
+          type="file"
+          webkitdirectory
+          multiple
+          aria-describedby="load-help"
+        />
+        <span>Choose project folder</span>
+      </label>
+    </header>
+
+    <main>
+      <div id="drop-zone" class="drop-zone">
+        <strong>Drop the project folder here</strong>
+        <span id="load-help"> or choose it above. Nothing is uploaded.</span>
+      </div>
+
+      <section
+        id="diagnostics"
+        class="diagnostics"
+        aria-live="polite"
+        hidden
+      ></section>
+
+      <div id="workspace" class="workspace" hidden>
+        <aside class="panel">
+          <div class="panel-header">
+            <h2>Setlist</h2>
+            <p class="subtle">Songs follow the plaintext list order.</p>
+            <label>
+              <span class="subtle">Current set</span>
+              <select id="setlist-select" class="set-select"></select>
+            </label>
+          </div>
+          <ol id="song-list" class="song-list"></ol>
+        </aside>
+
+        <section class="editor" aria-label="Song editor">
+          <section class="panel mapping-wrap">
+            <h2>HU ↔ EN mapping</h2>
+            <p class="subtle">
+              Automatic matches are editable for this browser session.
+            </p>
+            <div id="mapping"></div>
+          </section>
+
+          <div class="split">
+            <section class="panel roadmap-wrap">
+              <h2>Roadmap</h2>
+              <p class="subtle">
+                Arrange sections and choose each step’s language.
+              </p>
+              <ol id="roadmap" class="roadmap-list"></ol>
+              <div class="add-row">
+                <select id="add-section" aria-label="Section to add"></select>
+                <button id="add-step" type="button">Add</button>
+              </div>
+            </section>
+
+            <section class="panel preview-wrap">
+              <h2>Song preview</h2>
+              <p class="subtle">This is the exact sequence used for export.</p>
+              <div id="preview" class="preview"></div>
+            </section>
+          </div>
+
+          <section class="panel export-row">
+            <div>
+              <h2>ProPresenter text package</h2>
+              <p id="export-summary" class="subtle"></p>
+            </div>
+            <button id="export-button" class="primary" type="button">
+              Download ZIP
+            </button>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <script id="core">
+      (() => {
+        "use strict";
+
+        const SECTION_LABEL =
+          /^(Intro|Verse|Pre-Chorus|Chorus|Bridge|Ending)(?:\s+(\d+))?:?$/i;
+        const LANGUAGE_SEPARATOR = /^-{8,}\s*$/;
+        const SAFE_SONG_FILENAME = /^[a-z0-9][a-z0-9-]*\.txt$/;
+        const encoder = new TextEncoder();
+
+        function normalizeNewlines(text) {
+          return text.replace(/\r\n?/g, "\n");
+        }
+
+        function trimBlankLines(lines) {
+          let start = 0;
+          let end = lines.length;
+          while (start < end && lines[start].trim() === "") start += 1;
+          while (end > start && lines[end - 1].trim() === "") end -= 1;
+          return lines.slice(start, end);
+        }
+
+        function normalizeLabel(label) {
+          return label
+            .replace(/:\s*$/, "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLowerCase();
+        }
+
+        function displayLabel(label) {
+          return label.replace(/:\s*$/, "").trim().replace(/\s+/g, " ");
+        }
+
+        function parseLanguageBlock(filename, language, block, startLine) {
+          const lines = block.split("\n");
+          const sections = [];
+          const occurrenceCounts = new Map();
+          let current = null;
+
+          function finishCurrent() {
+            if (!current) return;
+            const bodyLines = trimBlankLines(current.bodyLines);
+            if (bodyLines.length === 0) {
+              throw new Error(
+                `${filename}:${current.line}: section "${current.label}" has no lyrics`,
+              );
+            }
+            sections.push({
+              key: current.key,
+              label: current.label,
+              normalizedLabel: current.normalizedLabel,
+              body: bodyLines.join("\n"),
+              language,
+              sourceIndex: sections.length,
+              line: current.line,
+            });
+          }
+
+          for (let index = 0; index < lines.length; index += 1) {
+            const rawLine = lines[index];
+            const candidate = rawLine.trim();
+            const labelMatch = candidate.match(SECTION_LABEL);
+            if (labelMatch) {
+              finishCurrent();
+              const label = displayLabel(candidate);
+              const normalizedLabel = normalizeLabel(label);
+              const occurrence =
+                (occurrenceCounts.get(normalizedLabel) ?? 0) + 1;
+              occurrenceCounts.set(normalizedLabel, occurrence);
+              current = {
+                key: `${language}:${normalizedLabel}:${occurrence}`,
+                label,
+                normalizedLabel,
+                line: startLine + index,
+                bodyLines: [],
+              };
+              continue;
+            }
+
+            if (!current) {
+              if (candidate !== "") {
+                throw new Error(
+                  `${filename}:${startLine + index}: lyric content appears before the first section label`,
+                );
+              }
+              continue;
+            }
+            current.bodyLines.push(rawLine);
+          }
+
+          finishCurrent();
+          if (sections.length === 0 && block.trim() !== "") {
+            throw new Error(`${filename}:${startLine}: no recognized sections`);
+          }
+          return sections;
+        }
+
+        function parseSong(filename, rawText) {
+          if (!SAFE_SONG_FILENAME.test(filename)) {
+            throw new Error(`${filename}: invalid canonical song filename`);
+          }
+
+          const text = normalizeNewlines(rawText);
+          const lines = text.split("\n");
+          const separatorIndexes = [];
+          lines.forEach((line, index) => {
+            if (LANGUAGE_SEPARATOR.test(line.trim())) {
+              separatorIndexes.push(index);
+            }
+          });
+
+          if (separatorIndexes.length === 0) {
+            throw new Error(`${filename}: missing language separator`);
+          }
+          if (separatorIndexes.length > 2) {
+            throw new Error(`${filename}: expected at most two separators`);
+          }
+
+          const titleLines = trimBlankLines(
+            lines.slice(0, separatorIndexes[0]),
+          ).filter((line) => line.trim() !== "");
+          if (titleLines.length !== 1) {
+            throw new Error(`${filename}: expected exactly one title line`);
+          }
+
+          const titleParts = titleLines[0].split(/\s+\/\s+/, 2);
+          const titleHu = titleParts[0]?.trim();
+          const titleEn = titleParts[1]?.trim() || null;
+          if (!titleHu) {
+            throw new Error(`${filename}: missing Hungarian title`);
+          }
+
+          const huStart = separatorIndexes[0] + 1;
+          const huEnd = separatorIndexes[1] ?? lines.length;
+          const hu = parseLanguageBlock(
+            filename,
+            "hu",
+            lines.slice(huStart, huEnd).join("\n"),
+            huStart + 1,
+          );
+          if (hu.length === 0) {
+            throw new Error(`${filename}: Hungarian lyrics have no sections`);
+          }
+
+          const en =
+            separatorIndexes.length === 2
+              ? parseLanguageBlock(
+                  filename,
+                  "en",
+                  lines.slice(separatorIndexes[1] + 1).join("\n"),
+                  separatorIndexes[1] + 2,
+                )
+              : [];
+
+          return {
+            id: filename.slice(0, -4),
+            filename,
+            titleHu,
+            titleEn,
+            hu,
+            en,
+          };
+        }
+
+        function parseSetlist(filename, rawText) {
+          if (!SAFE_SONG_FILENAME.test(filename)) {
+            throw new Error(`${filename}: invalid setlist filename`);
+          }
+          const id = filename.slice(0, -4);
+          const title = id
+            .split("-")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ");
+          const entries = [];
+          normalizeNewlines(rawText)
+            .split("\n")
+            .forEach((rawLine, index) => {
+              const value = rawLine.trim();
+              if (!value || value.startsWith("#")) return;
+              if (!SAFE_SONG_FILENAME.test(value)) {
+                throw new Error(
+                  `${filename}:${index + 1}: invalid song filename "${value}"`,
+                );
+              }
+              entries.push({ filename: value, line: index + 1 });
+            });
+          return { id, filename, title, entries };
+        }
+
+        function buildInitialMapping(song) {
+          const mapping = new Map();
+          const hu = song.hu;
+          const en = song.en;
+          if (en.length === 0) return mapping;
+
+          const family = (section) =>
+            section.normalizedLabel.replace(/\s+\d+$/, "");
+          const pairScore = (left, right) => {
+            if (left.normalizedLabel === right.normalizedLabel) return 6;
+            if (family(left) === family(right)) return 3;
+            return 0;
+          };
+          const gap = -2;
+          const scores = Array.from({ length: hu.length + 1 }, () =>
+            Array(en.length + 1).fill(0),
+          );
+          const directions = Array.from({ length: hu.length + 1 }, () =>
+            Array(en.length + 1).fill(null),
+          );
+
+          for (let row = 1; row <= hu.length; row += 1) {
+            scores[row][0] = row * gap;
+            directions[row][0] = "up";
+          }
+          for (let column = 1; column <= en.length; column += 1) {
+            scores[0][column] = column * gap;
+            directions[0][column] = "left";
+          }
+
+          for (let row = 1; row <= hu.length; row += 1) {
+            for (let column = 1; column <= en.length; column += 1) {
+              const diagonal =
+                scores[row - 1][column - 1] +
+                pairScore(hu[row - 1], en[column - 1]);
+              const up = scores[row - 1][column] + gap;
+              const left = scores[row][column - 1] + gap;
+              const best = Math.max(diagonal, up, left);
+              scores[row][column] = best;
+              directions[row][column] =
+                best === diagonal ? "diagonal" : best === up ? "up" : "left";
+            }
+          }
+
+          let row = hu.length;
+          let column = en.length;
+          while (row > 0 || column > 0) {
+            const direction = directions[row][column];
+            if (direction === "diagonal") {
+              mapping.set(hu[row - 1].key, en[column - 1].key);
+              row -= 1;
+              column -= 1;
+            } else if (direction === "up") {
+              row -= 1;
+            } else {
+              column -= 1;
+            }
+          }
+
+          for (const huSection of hu) {
+            if (mapping.has(huSection.key)) continue;
+            const exact = en.filter(
+              (enSection) =>
+                enSection.normalizedLabel === huSection.normalizedLabel,
+            );
+            if (exact.length > 0) {
+              mapping.set(huSection.key, exact[exact.length - 1].key);
+              continue;
+            }
+            const sameFamily = en.filter(
+              (enSection) => family(enSection) === family(huSection),
+            );
+            if (sameFamily.length === 1) {
+              mapping.set(huSection.key, sameFamily[0].key);
+            }
+          }
+          return mapping;
+        }
+
+        function createWorkingSong(song) {
+          return {
+            ...song,
+            mapping: buildInitialMapping(song),
+            roadmap: song.hu.map((section) => ({
+              sourceKey: section.key,
+              language: "hu",
+            })),
+          };
+        }
+
+        function getSection(song, key, language) {
+          return song[language].find((section) => section.key === key) ?? null;
+        }
+
+        function getStepSection(song, step) {
+          if (step.language === "hu") {
+            return getSection(song, step.sourceKey, "hu");
+          }
+          const englishKey = song.mapping.get(step.sourceKey);
+          return englishKey ? getSection(song, englishKey, "en") : null;
+        }
+
+        function updateMapping(song, sourceKey, englishKey) {
+          if (!getSection(song, sourceKey, "hu")) {
+            throw new Error(`Hungarian section "${sourceKey}" does not exist`);
+          }
+          if (englishKey !== null && !getSection(song, englishKey, "en")) {
+            throw new Error(`English section "${englishKey}" does not exist`);
+          }
+          const mapping = new Map(song.mapping);
+          if (englishKey === null) mapping.delete(sourceKey);
+          else mapping.set(sourceKey, englishKey);
+          const roadmap = song.roadmap.map((step) =>
+            step.sourceKey === sourceKey &&
+            step.language === "en" &&
+            englishKey === null
+              ? { ...step, language: "hu" }
+              : step,
+          );
+          return { ...song, mapping, roadmap };
+        }
+
+        function setStepLanguage(song, index, language) {
+          if (language !== "hu" && language !== "en") {
+            throw new Error(`Unsupported language "${language}"`);
+          }
+          const step = song.roadmap[index];
+          if (!step) throw new Error(`Roadmap step ${index + 1} does not exist`);
+          if (language === "en" && !song.mapping.get(step.sourceKey)) {
+            throw new Error(`Roadmap step ${index + 1} is not mapped to English`);
+          }
+          const roadmap = song.roadmap.map((item, itemIndex) =>
+            itemIndex === index ? { ...item, language } : item,
+          );
+          return { ...song, roadmap };
+        }
+
+        function moveStep(song, index, direction) {
+          const target = index + direction;
+          if (
+            !Number.isInteger(index) ||
+            !Number.isInteger(direction) ||
+            Math.abs(direction) !== 1 ||
+            index < 0 ||
+            index >= song.roadmap.length ||
+            target < 0 ||
+            target >= song.roadmap.length
+          ) {
+            return song;
+          }
+          const roadmap = [...song.roadmap];
+          [roadmap[index], roadmap[target]] = [roadmap[target], roadmap[index]];
+          return { ...song, roadmap };
+        }
+
+        function duplicateStep(song, index) {
+          const step = song.roadmap[index];
+          if (!step) throw new Error(`Roadmap step ${index + 1} does not exist`);
+          const roadmap = [...song.roadmap];
+          roadmap.splice(index + 1, 0, { ...step });
+          return { ...song, roadmap };
+        }
+
+        function removeStep(song, index) {
+          if (!song.roadmap[index]) {
+            throw new Error(`Roadmap step ${index + 1} does not exist`);
+          }
+          return {
+            ...song,
+            roadmap: song.roadmap.filter((_, itemIndex) => itemIndex !== index),
+          };
+        }
+
+        function addStep(song, sourceKey) {
+          if (!getSection(song, sourceKey, "hu")) {
+            throw new Error(`Hungarian section "${sourceKey}" does not exist`);
+          }
+          return {
+            ...song,
+            roadmap: [...song.roadmap, { sourceKey, language: "hu" }],
+          };
+        }
+
+        function validateWorkingSong(song) {
+          if (song.roadmap.length === 0) {
+            throw new Error(`${song.filename}: roadmap is empty`);
+          }
+          song.roadmap.forEach((step, index) => {
+            if (!getStepSection(song, step)) {
+              throw new Error(
+                `${song.filename}: roadmap step ${index + 1} references an unavailable ${step.language.toUpperCase()} section`,
+              );
+            }
+          });
+        }
+
+        function serializeSong(song) {
+          validateWorkingSong(song);
+          const title = song.titleEn
+            ? `${song.titleHu} / ${song.titleEn}`
+            : song.titleHu;
+          const sections = song.roadmap.map((step) => {
+            const section = getStepSection(song, step);
+            return `${section.label}\n${section.body}`;
+          });
+          return `${title}\n\n${sections.join("\n\n")}\n`;
+        }
+
+        function buildProject(songFiles, setlistFiles) {
+          const songs = new Map();
+          const setlists = new Map();
+          const errors = [];
+
+          for (const file of songFiles) {
+            try {
+              if (songs.has(file.filename)) {
+                throw new Error(`${file.filename}: duplicate canonical song`);
+              }
+              songs.set(
+                file.filename,
+                createWorkingSong(parseSong(file.filename, file.text)),
+              );
+            } catch (error) {
+              errors.push(error instanceof Error ? error.message : String(error));
+            }
+          }
+
+          for (const file of setlistFiles) {
+            try {
+              if (setlists.has(file.filename)) {
+                throw new Error(`${file.filename}: duplicate setlist`);
+              }
+              setlists.set(
+                file.filename,
+                parseSetlist(file.filename, file.text),
+              );
+            } catch (error) {
+              errors.push(error instanceof Error ? error.message : String(error));
+            }
+          }
+
+          for (const setlist of setlists.values()) {
+            for (const entry of setlist.entries) {
+              if (!songs.has(entry.filename)) {
+                errors.push(
+                  `${setlist.filename}:${entry.line}: song "${entry.filename}" was not loaded`,
+                );
+              }
+            }
+          }
+
+          return { songs, setlists, errors };
+        }
+
+        function buildExportEntries(setlist, songs) {
+          const errors = validateSetlistForExport(setlist, songs);
+          if (errors.length > 0) throw new Error(errors.join("\n"));
+          const width = Math.max(2, String(setlist.entries.length).length);
+          return setlist.entries.map((entry, index) => {
+            const song = songs.get(entry.filename);
+            if (!song) {
+              throw new Error(
+                `${setlist.filename}:${entry.line}: song "${entry.filename}" was not loaded`,
+              );
+            }
+            const number = String(index + 1).padStart(width, "0");
+            return {
+              name: `${setlist.id}/${number}-${entry.filename}`,
+              data: encoder.encode(serializeSong(song)),
+            };
+          });
+        }
+
+        function validateSetlistForExport(setlist, songs) {
+          const errors = [];
+          if (setlist.entries.length === 0) {
+            errors.push(`${setlist.filename}: setlist is empty`);
+          }
+          for (const entry of setlist.entries) {
+            const song = songs.get(entry.filename);
+            if (!song) {
+              errors.push(
+                `${setlist.filename}:${entry.line}: song "${entry.filename}" was not loaded`,
+              );
+              continue;
+            }
+            try {
+              validateWorkingSong(song);
+            } catch (error) {
+              errors.push(error instanceof Error ? error.message : String(error));
+            }
+          }
+          return errors;
+        }
+
+        let crcTable = null;
+        function getCrcTable() {
+          if (crcTable) return crcTable;
+          crcTable = new Uint32Array(256);
+          for (let number = 0; number < 256; number += 1) {
+            let value = number;
+            for (let bit = 0; bit < 8; bit += 1) {
+              value =
+                value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+            }
+            crcTable[number] = value >>> 0;
+          }
+          return crcTable;
+        }
+
+        function crc32(bytes) {
+          const table = getCrcTable();
+          let crc = 0xffffffff;
+          for (const byte of bytes) {
+            crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+          }
+          return (crc ^ 0xffffffff) >>> 0;
+        }
+
+        function makeBytes(length, write) {
+          const bytes = new Uint8Array(length);
+          write(new DataView(bytes.buffer));
+          return bytes;
+        }
+
+        function concatenate(chunks) {
+          const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
+          const result = new Uint8Array(size);
+          let offset = 0;
+          for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+          }
+          return result;
+        }
+
+        function createZipBytes(entries) {
+          const localChunks = [];
+          const centralChunks = [];
+          let localOffset = 0;
+          const utf8Flag = 0x0800;
+          const dosDate = 0x0021;
+
+          for (const entry of entries) {
+            const name = encoder.encode(entry.name);
+            const data =
+              entry.data instanceof Uint8Array
+                ? entry.data
+                : new Uint8Array(entry.data);
+            const crc = crc32(data);
+            const localHeader = makeBytes(30, (view) => {
+              view.setUint32(0, 0x04034b50, true);
+              view.setUint16(4, 20, true);
+              view.setUint16(6, utf8Flag, true);
+              view.setUint16(8, 0, true);
+              view.setUint16(10, 0, true);
+              view.setUint16(12, dosDate, true);
+              view.setUint32(14, crc, true);
+              view.setUint32(18, data.length, true);
+              view.setUint32(22, data.length, true);
+              view.setUint16(26, name.length, true);
+              view.setUint16(28, 0, true);
+            });
+            localChunks.push(localHeader, name, data);
+
+            const centralHeader = makeBytes(46, (view) => {
+              view.setUint32(0, 0x02014b50, true);
+              view.setUint16(4, 20, true);
+              view.setUint16(6, 20, true);
+              view.setUint16(8, utf8Flag, true);
+              view.setUint16(10, 0, true);
+              view.setUint16(12, 0, true);
+              view.setUint16(14, dosDate, true);
+              view.setUint32(16, crc, true);
+              view.setUint32(20, data.length, true);
+              view.setUint32(24, data.length, true);
+              view.setUint16(28, name.length, true);
+              view.setUint16(30, 0, true);
+              view.setUint16(32, 0, true);
+              view.setUint16(34, 0, true);
+              view.setUint16(36, 0, true);
+              view.setUint32(38, 0, true);
+              view.setUint32(42, localOffset, true);
+            });
+            centralChunks.push(centralHeader, name);
+            localOffset += localHeader.length + name.length + data.length;
+          }
+
+          const centralDirectory = concatenate(centralChunks);
+          const eocd = makeBytes(22, (view) => {
+            view.setUint32(0, 0x06054b50, true);
+            view.setUint16(4, 0, true);
+            view.setUint16(6, 0, true);
+            view.setUint16(8, entries.length, true);
+            view.setUint16(10, entries.length, true);
+            view.setUint32(12, centralDirectory.length, true);
+            view.setUint32(16, localOffset, true);
+            view.setUint16(20, 0, true);
+          });
+          return concatenate([...localChunks, centralDirectory, eocd]);
+        }
+
+        globalThis.LyricsTool = Object.freeze({
+          parseSong,
+          parseSetlist,
+          buildInitialMapping,
+          createWorkingSong,
+          getStepSection,
+          updateMapping,
+          setStepLanguage,
+          moveStep,
+          duplicateStep,
+          removeStep,
+          addStep,
+          validateWorkingSong,
+          serializeSong,
+          buildProject,
+          validateSetlistForExport,
+          buildExportEntries,
+          crc32,
+          createZipBytes,
+        });
+      })();
+    </script>
+    <script>
+      (() => {
+        "use strict";
+
+        const Tool = globalThis.LyricsTool;
+        const elements = {
+          input: document.querySelector("#project-input"),
+          dropZone: document.querySelector("#drop-zone"),
+          diagnostics: document.querySelector("#diagnostics"),
+          workspace: document.querySelector("#workspace"),
+          setlistSelect: document.querySelector("#setlist-select"),
+          songList: document.querySelector("#song-list"),
+          mapping: document.querySelector("#mapping"),
+          roadmap: document.querySelector("#roadmap"),
+          addSection: document.querySelector("#add-section"),
+          addStep: document.querySelector("#add-step"),
+          preview: document.querySelector("#preview"),
+          exportButton: document.querySelector("#export-button"),
+          exportSummary: document.querySelector("#export-summary"),
+        };
+
+        let project = { songs: new Map(), setlists: new Map(), errors: [] };
+        let selectedSetlistFilename = null;
+        let selectedSongIndex = 0;
+
+        function makeElement(tag, options = {}) {
+          const element = document.createElement(tag);
+          if (options.className) element.className = options.className;
+          if (options.text !== undefined) element.textContent = options.text;
+          if (options.type) element.type = options.type;
+          if (options.title) element.title = options.title;
+          return element;
+        }
+
+        function showDiagnostics(messages, level = "info", heading = "") {
+          elements.diagnostics.replaceChildren();
+          if (!messages.length) {
+            elements.diagnostics.hidden = true;
+            elements.diagnostics.removeAttribute("data-level");
+            return;
+          }
+          elements.diagnostics.hidden = false;
+          elements.diagnostics.dataset.level = level;
+          const strong = makeElement("strong", {
+            text: heading || (level === "error" ? "Could not continue" : "Ready"),
+          });
+          elements.diagnostics.append(strong);
+          if (messages.length === 1) {
+            elements.diagnostics.append(
+              document.createTextNode(` — ${messages[0]}`),
+            );
+            return;
+          }
+          const list = makeElement("ul");
+          messages.forEach((message) => {
+            list.append(makeElement("li", { text: message }));
+          });
+          elements.diagnostics.append(list);
+        }
+
+        function currentSetlist() {
+          return selectedSetlistFilename
+            ? project.setlists.get(selectedSetlistFilename) ?? null
+            : null;
+        }
+
+        function currentSong() {
+          const setlist = currentSetlist();
+          const entry = setlist?.entries[selectedSongIndex];
+          return entry ? project.songs.get(entry.filename) ?? null : null;
+        }
+
+        function sectionDisplayName(section) {
+          const siblings = section.language === "hu"
+            ? currentSong()?.hu ?? []
+            : currentSong()?.en ?? [];
+          const matching = siblings.filter(
+            (item) => item.normalizedLabel === section.normalizedLabel,
+          );
+          if (matching.length < 2) return section.label;
+          const occurrence = matching.findIndex(
+            (item) => item.key === section.key,
+          );
+          return `${section.label} · ${occurrence + 1}`;
+        }
+
+        function setCurrentSong(nextSong, focusSelector = null) {
+          project.songs.set(nextSong.filename, nextSong);
+          renderEditor();
+          if (focusSelector) {
+            requestAnimationFrame(() => {
+              document.querySelector(focusSelector)?.focus();
+            });
+          }
+        }
+
+        function renderSetlistOptions() {
+          elements.setlistSelect.replaceChildren();
+          for (const [filename, setlist] of project.setlists) {
+            const option = makeElement("option", { text: setlist.id });
+            option.value = filename;
+            elements.setlistSelect.append(option);
+          }
+          elements.setlistSelect.value = selectedSetlistFilename ?? "";
+        }
+
+        function renderSongList() {
+          elements.songList.replaceChildren();
+          const setlist = currentSetlist();
+          if (!setlist) return;
+          setlist.entries.forEach((entry, index) => {
+            const song = project.songs.get(entry.filename);
+            const item = makeElement("li");
+            const button = makeElement("button", { type: "button" });
+            button.dataset.index = String(index);
+            if (!song) button.classList.add("missing");
+            button.setAttribute(
+              "aria-current",
+              String(index === selectedSongIndex),
+            );
+            button.append(
+              makeElement("span", {
+                className: "song-number",
+                text: String(index + 1).padStart(2, "0"),
+              }),
+              makeElement("span", {
+                className: "song-name",
+                text: song?.titleHu ?? entry.filename,
+              }),
+            );
+            item.append(button);
+            elements.songList.append(item);
+          });
+        }
+
+        function renderMapping(song) {
+          elements.mapping.replaceChildren();
+          if (song.en.length === 0) {
+            elements.mapping.append(
+              makeElement("p", {
+                className: "subtle",
+                text: "This song has no English sections.",
+              }),
+            );
+            return;
+          }
+
+          const table = makeElement("table", { className: "mapping-table" });
+          const head = document.createElement("thead");
+          const headRow = document.createElement("tr");
+          headRow.append(
+            makeElement("th", { text: "Hungarian" }),
+            makeElement("th", { text: "English" }),
+          );
+          head.append(headRow);
+          table.append(head);
+
+          const body = document.createElement("tbody");
+          for (const huSection of song.hu) {
+            const row = document.createElement("tr");
+            row.append(
+              makeElement("td", { text: sectionDisplayName(huSection) }),
+            );
+            const selectCell = document.createElement("td");
+            const select = document.createElement("select");
+            select.dataset.sourceKey = huSection.key;
+            select.setAttribute(
+              "aria-label",
+              `English mapping for ${sectionDisplayName(huSection)}`,
+            );
+            const none = makeElement("option", { text: "— Not mapped —" });
+            none.value = "";
+            select.append(none);
+            for (const enSection of song.en) {
+              const option = makeElement("option", {
+                text: sectionDisplayName(enSection),
+              });
+              option.value = enSection.key;
+              select.append(option);
+            }
+            select.value = song.mapping.get(huSection.key) ?? "";
+            selectCell.append(select);
+            row.append(selectCell);
+            body.append(row);
+          }
+          table.append(body);
+          elements.mapping.append(table);
+
+          const mapped = new Set(song.mapping.values());
+          const unmatched = song.en.filter((section) => !mapped.has(section.key));
+          if (unmatched.length > 0) {
+            elements.mapping.append(
+              makeElement("p", {
+                className: "subtle",
+                text: `Unmatched EN: ${unmatched.map(sectionDisplayName).join(", ")}`,
+              }),
+            );
+          }
+        }
+
+        function renderRoadmap(song) {
+          elements.roadmap.replaceChildren();
+          song.roadmap.forEach((step, index) => {
+            const source = song.hu.find(
+              (section) => section.key === step.sourceKey,
+            );
+            const item = makeElement("li", { className: "roadmap-step" });
+            const description = document.createElement("div");
+            description.append(
+              makeElement("div", {
+                className: "step-title",
+                text: source ? sectionDisplayName(source) : step.sourceKey,
+              }),
+            );
+
+            const language = makeElement("div", {
+              className: "language-toggle",
+            });
+            language.setAttribute("aria-label", `Language for step ${index + 1}`);
+            const huButton = makeElement("button", {
+              type: "button",
+              text: "HU",
+              title: "Use Hungarian",
+            });
+            huButton.dataset.action = "language";
+            huButton.dataset.language = "hu";
+            huButton.dataset.index = String(index);
+            huButton.setAttribute(
+              "aria-pressed",
+              String(step.language === "hu"),
+            );
+            const enButton = makeElement("button", {
+              type: "button",
+              text: "EN",
+              title: song.mapping.has(step.sourceKey)
+                ? "Use English"
+                : "Map this section to English first",
+            });
+            enButton.dataset.action = "language";
+            enButton.dataset.language = "en";
+            enButton.dataset.index = String(index);
+            enButton.disabled = !song.mapping.has(step.sourceKey);
+            enButton.setAttribute(
+              "aria-pressed",
+              String(step.language === "en"),
+            );
+            language.append(huButton, enButton);
+            description.append(language);
+
+            const controls = makeElement("div", {
+              className: "step-controls",
+            });
+            const actions = [
+              ["up", "↑", "Move up", index === 0],
+              [
+                "down",
+                "↓",
+                "Move down",
+                index === song.roadmap.length - 1,
+              ],
+              ["duplicate", "⧉", "Duplicate", false],
+              ["remove", "×", "Remove", false],
+            ];
+            actions.forEach(([action, text, title, disabled]) => {
+              const button = makeElement("button", { type: "button", text, title });
+              button.dataset.action = action;
+              button.dataset.index = String(index);
+              button.disabled = disabled;
+              if (action === "remove") button.classList.add("danger");
+              button.setAttribute("aria-label", `${title} step ${index + 1}`);
+              controls.append(button);
+            });
+            item.append(description, controls);
+            elements.roadmap.append(item);
+          });
+
+          elements.addSection.replaceChildren();
+          for (const section of song.hu) {
+            const option = makeElement("option", {
+              text: sectionDisplayName(section),
+            });
+            option.value = section.key;
+            elements.addSection.append(option);
+          }
+        }
+
+        function renderPreview(song) {
+          elements.preview.replaceChildren();
+          const title = song.titleEn
+            ? `${song.titleHu} / ${song.titleEn}`
+            : song.titleHu;
+          elements.preview.append(
+            makeElement("div", { className: "preview-title", text: title }),
+          );
+          if (song.roadmap.length === 0) {
+            elements.preview.append(
+              makeElement("p", {
+                className: "subtle",
+                text: "Add at least one section to this roadmap.",
+              }),
+            );
+            return;
+          }
+          song.roadmap.forEach((step) => {
+            const section = Tool.getStepSection(song, step);
+            const slide = makeElement("article", { className: "slide" });
+            if (!section) {
+              slide.append(
+                makeElement("p", {
+                  className: "danger",
+                  text: "This roadmap step has no mapped section.",
+                }),
+              );
+            } else {
+              slide.append(
+                makeElement("div", {
+                  className: "slide-label",
+                  text: `${section.label} · ${step.language.toUpperCase()}`,
+                }),
+                makeElement("pre", {
+                  className: "slide-body",
+                  text: section.body,
+                }),
+              );
+            }
+            elements.preview.append(slide);
+          });
+        }
+
+        function renderEditor() {
+          renderSongList();
+          const song = currentSong();
+          if (!song) {
+            elements.mapping.replaceChildren(
+              makeElement("p", {
+                className: "danger",
+                text: "This song could not be loaded.",
+              }),
+            );
+            elements.roadmap.replaceChildren();
+            elements.preview.replaceChildren();
+            elements.exportButton.disabled = true;
+            return;
+          }
+          renderMapping(song);
+          renderRoadmap(song);
+          renderPreview(song);
+          const setlist = currentSetlist();
+          const exportErrors = Tool.validateSetlistForExport(
+            setlist,
+            project.songs,
+          );
+          elements.exportSummary.textContent =
+            exportErrors.length === 0
+              ? `${setlist.entries.length} songs · ${setlist.title}`
+              : `${exportErrors.length} issue${exportErrors.length === 1 ? "" : "s"} must be fixed`;
+          elements.exportButton.disabled = exportErrors.length > 0;
+          elements.exportButton.textContent = `Download ${setlist.id}.zip`;
+        }
+
+        function renderProject() {
+          const firstSetlist = project.setlists.keys().next().value ?? null;
+          selectedSetlistFilename = firstSetlist;
+          selectedSongIndex = 0;
+          renderSetlistOptions();
+          elements.workspace.hidden =
+            project.songs.size === 0 || project.setlists.size === 0;
+          if (!elements.workspace.hidden) renderEditor();
+        }
+
+        async function readProjectRecords(records) {
+          const songFiles = [];
+          const setlistFiles = [];
+          for (const record of records) {
+            const path = record.path.replaceAll("\\", "/").replace(/^\/+/, "");
+            const songMatch = path.match(
+              /(?:^|\/)plaintext\/([^/]+\.txt)$/i,
+            );
+            const setlistMatch = path.match(
+              /(?:^|\/)setlists\/([^/]+\.txt)$/i,
+            );
+            if (!songMatch && !setlistMatch) continue;
+            const parsedFile = {
+              filename: (songMatch ?? setlistMatch)[1],
+              text: await record.file.text(),
+            };
+            if (songMatch) songFiles.push(parsedFile);
+            else setlistFiles.push(parsedFile);
+          }
+          return { songFiles, setlistFiles };
+        }
+
+        async function loadRecords(records) {
+          showDiagnostics(["Reading local files…"], "info", "Loading");
+          try {
+            const { songFiles, setlistFiles } =
+              await readProjectRecords(records);
+            if (songFiles.length === 0 || setlistFiles.length === 0) {
+              throw new Error(
+                "Choose the repository root containing plaintext/ and setlists/.",
+              );
+            }
+            project = Tool.buildProject(songFiles, setlistFiles);
+            renderProject();
+            if (project.errors.length > 0) {
+              showDiagnostics(project.errors, "error", "Loaded with errors");
+            } else {
+              showDiagnostics(
+                [
+                  `${project.songs.size} songs`,
+                  `${project.setlists.size} setlists`,
+                  "All processing stays on this device",
+                ],
+                "info",
+                "Project loaded",
+              );
+            }
+          } catch (error) {
+            elements.workspace.hidden = true;
+            showDiagnostics(
+              [error instanceof Error ? error.message : String(error)],
+              "error",
+            );
+          }
+        }
+
+        function readDirectoryEntries(reader) {
+          return new Promise((resolve, reject) => {
+            const all = [];
+            const readBatch = () => {
+              reader.readEntries((entries) => {
+                if (entries.length === 0) {
+                  resolve(all);
+                  return;
+                }
+                all.push(...entries);
+                readBatch();
+              }, reject);
+            };
+            readBatch();
+          });
+        }
+
+        async function collectEntry(entry, parentPath = "") {
+          const path = `${parentPath}/${entry.name}`;
+          if (entry.isFile) {
+            const file = await new Promise((resolve, reject) =>
+              entry.file(resolve, reject),
+            );
+            return [{ file, path }];
+          }
+          if (entry.isDirectory) {
+            const children = await readDirectoryEntries(entry.createReader());
+            const nested = await Promise.all(
+              children.map((child) => collectEntry(child, path)),
+            );
+            return nested.flat();
+          }
+          return [];
+        }
+
+        async function recordsFromDrop(dataTransfer) {
+          const entries = [...dataTransfer.items]
+            .map((item) => item.webkitGetAsEntry?.())
+            .filter(Boolean);
+          if (entries.length > 0) {
+            const nested = await Promise.all(
+              entries.map((entry) => collectEntry(entry)),
+            );
+            return nested.flat();
+          }
+          return [...dataTransfer.files].map((file) => ({
+            file,
+            path: file.webkitRelativePath || file.name,
+          }));
+        }
+
+        function downloadCurrentSetlist() {
+          try {
+            const setlist = currentSetlist();
+            if (!setlist) throw new Error("Select a setlist first.");
+            const entries = Tool.buildExportEntries(setlist, project.songs);
+            const bytes = Tool.createZipBytes(entries);
+            const blob = new Blob([bytes], { type: "application/zip" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${setlist.id}.zip`;
+            document.body.append(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showDiagnostics(
+              [`${entries.length} songs packaged as ${setlist.id}.zip`],
+              "info",
+              "Export ready",
+            );
+          } catch (error) {
+            showDiagnostics(
+              [error instanceof Error ? error.message : String(error)],
+              "error",
+              "Export blocked",
+            );
+          }
+        }
+
+        function runBrowserSelfTests() {
+          if (location.hash !== "#tests") return;
+          const failures = [];
+          const checks = [
+            [
+              "CRLF, bilingual colon, and inner blank-line parsing",
+              () => {
+                const song = Tool.parseSong(
+                  "test.txt",
+                  "HU / EN\r\n\r\n--------\r\n\r\nVerse\r\nH1\r\n\r\nH2\r\n\r\n--------\r\n\r\nVerse:\r\nE1\r\n\r\nE2",
+                );
+                return (
+                  song.hu[0].body === "H1\n\nH2" &&
+                  song.en[0].body === "E1\n\nE2"
+                );
+              },
+            ],
+            [
+              "Repeated occurrence parsing",
+              () => {
+                const song = Tool.parseSong(
+                  "test.txt",
+                  "Cím\n\n--------\n\nChorus\nElső\n\nChorus\nMásodik",
+                );
+                return (
+                  song.hu.length === 2 &&
+                  song.hu[0].key !== song.hu[1].key &&
+                  song.hu[1].body === "Második"
+                );
+              },
+            ],
+            [
+              "Setlist comments, blanks, and duplicates",
+              () => {
+                const setlist = Tool.parseSetlist(
+                  "set.txt",
+                  "# note\n\nfirst.txt\nfirst.txt",
+                );
+                return (
+                  setlist.entries.length === 2 &&
+                  setlist.entries[1].line === 4
+                );
+              },
+            ],
+            [
+              "Unsafe setlist rejection",
+              () => {
+                try {
+                  Tool.parseSetlist("set.txt", "../song.txt");
+                  return false;
+                } catch {
+                  return true;
+                }
+              },
+            ],
+            [
+              "Ordered HU-EN section alignment",
+              () => {
+                const song = Tool.parseSong(
+                  "test.txt",
+                  "HU / EN\n\n--------\n\nVerse\nH1\n\nChorus\nHB\n\nEnding\nHE\n\n--------\n\nVerse\nE1\n\nBridge\nEB\n\nEnding\nEE",
+                );
+                const mapping = Tool.buildInitialMapping(song);
+                return mapping.get(song.hu[1].key) === song.en[1].key;
+              },
+            ],
+            [
+              "Mixed-language roadmap serialization",
+              () => {
+                const parsed = Tool.parseSong(
+                  "test.txt",
+                  "HU / EN\n\n--------\n\nVerse\nMagyar\n\n--------\n\nVerse\nEnglish",
+                );
+                const song = Tool.setStepLanguage(
+                  Tool.createWorkingSong(parsed),
+                  0,
+                  "en",
+                );
+                const text = Tool.serializeSong(song);
+                return text.includes("Verse\nEnglish") && !text.includes("Magyar\n");
+              },
+            ],
+            [
+              "CRC-32",
+              () =>
+                Tool.crc32(new TextEncoder().encode("123456789")) ===
+                0xcbf43926,
+            ],
+            [
+              "ZIP headers and entry count",
+              () => {
+                const bytes = Tool.createZipBytes([
+                  {
+                    name: "set/01-á.txt",
+                    data: new TextEncoder().encode("ének"),
+                  },
+                  {
+                    name: "set/02-b.txt",
+                    data: new TextEncoder().encode("dal"),
+                  },
+                ]);
+                const view = new DataView(bytes.buffer);
+                const end = bytes.length - 22;
+                return (
+                  view.getUint32(0, true) === 0x04034b50 &&
+                  (view.getUint16(6, true) & 0x0800) === 0x0800 &&
+                  view.getUint32(end, true) === 0x06054b50 &&
+                  view.getUint16(end + 10, true) === 2
+                );
+              },
+            ],
+          ];
+          checks.forEach(([name, check]) => {
+            try {
+              if (!check()) failures.push(`${name} returned the wrong result`);
+            } catch (error) {
+              failures.push(
+                `${name}: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            }
+          });
+          showDiagnostics(
+            failures.length
+              ? failures
+              : [`${checks.length} browser self-tests passed`],
+            failures.length ? "error" : "info",
+            failures.length ? "Self-tests failed" : "Self-tests passed",
+          );
+        }
+
+        elements.input.addEventListener("change", () => {
+          const records = [...elements.input.files].map((file) => ({
+            file,
+            path: file.webkitRelativePath || file.name,
+          }));
+          void loadRecords(records);
+        });
+
+        for (const eventName of ["dragenter", "dragover"]) {
+          elements.dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            elements.dropZone.classList.add("dragging");
+          });
+        }
+        for (const eventName of ["dragleave", "drop"]) {
+          elements.dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            elements.dropZone.classList.remove("dragging");
+          });
+        }
+        elements.dropZone.addEventListener("drop", async (event) => {
+          event.stopPropagation();
+          const records = await recordsFromDrop(event.dataTransfer);
+          await loadRecords(records);
+        });
+        document.addEventListener("dragover", (event) => {
+          event.preventDefault();
+        });
+        document.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          const records = await recordsFromDrop(event.dataTransfer);
+          await loadRecords(records);
+        });
+
+        elements.setlistSelect.addEventListener("change", () => {
+          selectedSetlistFilename = elements.setlistSelect.value;
+          selectedSongIndex = 0;
+          renderEditor();
+        });
+
+        elements.songList.addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-index]");
+          if (!button) return;
+          selectedSongIndex = Number(button.dataset.index);
+          renderEditor();
+        });
+
+        elements.mapping.addEventListener("change", (event) => {
+          const select = event.target.closest("select[data-source-key]");
+          const song = currentSong();
+          if (!select || !song) return;
+          try {
+            setCurrentSong(
+              Tool.updateMapping(
+                song,
+                select.dataset.sourceKey,
+                select.value || null,
+              ),
+              `select[data-source-key="${CSS.escape(select.dataset.sourceKey)}"]`,
+            );
+          } catch (error) {
+            showDiagnostics(
+              [error instanceof Error ? error.message : String(error)],
+              "error",
+            );
+          }
+        });
+
+        elements.roadmap.addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-action]");
+          const song = currentSong();
+          if (!button || !song) return;
+          const index = Number(button.dataset.index);
+          try {
+            let nextSong = song;
+            switch (button.dataset.action) {
+              case "language":
+                nextSong = Tool.setStepLanguage(
+                  song,
+                  index,
+                  button.dataset.language,
+                );
+                break;
+              case "up":
+                nextSong = Tool.moveStep(song, index, -1);
+                break;
+              case "down":
+                nextSong = Tool.moveStep(song, index, 1);
+                break;
+              case "duplicate":
+                nextSong = Tool.duplicateStep(song, index);
+                break;
+              case "remove":
+                nextSong = Tool.removeStep(song, index);
+                break;
+            }
+            const nextIndex =
+              button.dataset.action === "up"
+                ? index - 1
+                : button.dataset.action === "down" ||
+                    button.dataset.action === "duplicate"
+                  ? index + 1
+                  : button.dataset.action === "remove"
+                    ? Math.min(index, nextSong.roadmap.length - 1)
+                    : index;
+            const focusSelector =
+              nextIndex >= 0
+                ? `button[data-action="${button.dataset.action}"][data-index="${nextIndex}"]${button.dataset.action === "language" ? `[data-language="${button.dataset.language}"]` : ""}`
+                : "#add-step";
+            setCurrentSong(nextSong, focusSelector);
+          } catch (error) {
+            showDiagnostics(
+              [error instanceof Error ? error.message : String(error)],
+              "error",
+            );
+          }
+        });
+
+        elements.addStep.addEventListener("click", () => {
+          const song = currentSong();
+          if (!song || !elements.addSection.value) return;
+          setCurrentSong(
+            Tool.addStep(song, elements.addSection.value),
+            "#add-step",
+          );
+        });
+
+        elements.exportButton.addEventListener(
+          "click",
+          downloadCurrentSetlist,
+        );
+
+        runBrowserSelfTests();
+      })();
+    </script>
+  </body>
+</html>

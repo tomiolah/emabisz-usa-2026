@@ -28,3 +28,7 @@ Icon?
 Thumbs.db
 Desktop.ini
 .vscode/
+
+# AI
+docs/superpowers/
+temp/
